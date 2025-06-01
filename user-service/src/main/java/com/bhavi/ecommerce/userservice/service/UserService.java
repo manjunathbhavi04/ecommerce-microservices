@@ -1,28 +1,45 @@
 package com.bhavi.ecommerce.userservice.service;
 
+import com.bhavi.ecommerce.userservice.dto.request.LoginRequest;
 import com.bhavi.ecommerce.userservice.dto.request.RegisterRequest;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
 import com.bhavi.ecommerce.userservice.enums.Role;
+import com.bhavi.ecommerce.userservice.exception.InvalidTokenException;
+import com.bhavi.ecommerce.userservice.exception.TokenExpiredException;
+import com.bhavi.ecommerce.userservice.exception.UserNotFoundException;
 import com.bhavi.ecommerce.userservice.model.User;
+import com.bhavi.ecommerce.userservice.model.token.PasswordResetToken;
 import com.bhavi.ecommerce.userservice.repository.UserRepository;
+import com.bhavi.ecommerce.userservice.repository.token.PasswordResetTokenRepository;
 import com.bhavi.ecommerce.userservice.security.JwtUtil;
+import com.bhavi.ecommerce.userservice.service.email.EmailService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.parameters.P;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Good practice for operations that modify data
 
-import java.util.Collections;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UserService {
 
     private final UserRepository userRepository;
-    private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final JwtUtil jwtUtil;
+    private final AuthenticationManager authenticationManager;
+    private final EmailService emailService; // Inject EmailService
+    private final PasswordResetTokenRepository passwordResetTokenRepository;// Injected from SecurityConfig
+
 
     @Transactional // Ensures atomicity for database operations
     public AuthResponse registerUser(RegisterRequest request) {
@@ -97,5 +114,107 @@ public class UserService {
                 .userId(updatedUser.getId())
                 .userEmail(updatedUser.getEmail())
                 .build();
+    }
+
+    //Login
+    public AuthResponse login(LoginRequest request) {
+        try {
+            // Authenticate user using Spring Security's AuthenticationManager
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
+
+            // If authentication is successful, get UserDetails and generate JWT
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtil.generateToken(userDetails);
+
+            // Find the actual User object to get userId and email for the response
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new RuntimeException("User not found after successful authentication."));
+
+
+            return (AuthResponse.builder()
+                    .token(token)
+                    .message("Login successful!")
+                    .userId(user.getId())
+                    .userEmail(user.getEmail())
+                    .build());
+
+        } catch (Exception e) {
+            // Handle authentication failure (e.g., bad credentials)
+            return (AuthResponse.builder().message("Invalid email or password.").build());
+        }
+    }
+
+
+    // FORGOT PASSWORD REQUEST ---
+    @Transactional
+    public void requestPasswordReset(String email, String frontendBaseUrl) {
+        // 1. Find the user by email
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("User not found with email: " + email));
+
+        // 2. Delete any existing password reset tokens for this user
+        // This ensures only one valid token exists at a time for a user
+        passwordResetTokenRepository.deleteByUserId(user.getId());
+
+        // 3. Generate a unique token
+        String token = UUID.randomUUID().toString();
+
+        // 4. Set token expiry (e.g., 1 hour from now)
+        LocalDateTime expiryDateTime = LocalDateTime.now().plusHours(1);
+
+        // 5. Create and save the new PasswordResetToken
+        PasswordResetToken resetToken = PasswordResetToken.builder()
+                .token(token)
+                .user(user)
+                .expiryDate(expiryDateTime)
+                .build();
+        passwordResetTokenRepository.save(resetToken);
+
+        // 6. Construct the password reset link for the user
+        String resetLink = frontendBaseUrl + "/reset-password?token=" + token; // Adjust frontend path if needed
+
+        // 7. Send the email
+        String subject = "Password Reset Request for Your Account";
+        String emailContent = "Hello " + user.getFirstName() + ",\n\n"
+                + "We received a request to reset the password for your account. "
+                + "Please click on the following link to reset your password:\n\n"
+                + resetLink + "\n\n"
+                + "This link will expire in 1 hour.\n"
+                + "If you did not request a password reset, please ignore this email.\n\n"
+                + "Best regards,\nYour E-commerce Team";
+
+        emailService.sendEmail(user.getEmail(), subject, emailContent);
+    }
+
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+
+        //find the token which was generated for the reset password
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new InvalidTokenException("Invalid or non-existent password reset token."));
+
+        // check if the token is expired because maybe the customer has tried to reset the password long back,
+        //and now he is trying to access the same token again because tokens are expired every hour
+        if ( resetToken.isExpired() ) {
+            //if the token is expired, then delete the whole token
+            passwordResetTokenRepository.delete(resetToken);
+            throw new TokenExpiredException(("Password reset token has expired"));
+        }
+
+        // get the user associated with the token because his password must be updated
+        User user = resetToken.getUser();
+        if (  user == null ) {
+            throw new InvalidTokenException("Password reset token is not associated with a user.");
+        }
+
+        //now update the user's password and save it in the database
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Invalidate/Delete the token after successful password reset
+        // This prevents the same token from being used multiple times
+        passwordResetTokenRepository.delete(resetToken);
     }
 }

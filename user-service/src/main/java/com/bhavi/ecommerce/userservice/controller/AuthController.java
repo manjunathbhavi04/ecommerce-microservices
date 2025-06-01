@@ -1,5 +1,6 @@
 package com.bhavi.ecommerce.userservice.controller;
 
+import com.bhavi.ecommerce.userservice.dto.request.ForgotPasswordRequest;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
 import com.bhavi.ecommerce.userservice.dto.request.LoginRequest;
 import com.bhavi.ecommerce.userservice.dto.request.RegisterRequest;
@@ -8,6 +9,7 @@ import com.bhavi.ecommerce.userservice.model.User;
 import com.bhavi.ecommerce.userservice.repository.UserRepository;
 import com.bhavi.ecommerce.userservice.security.JwtUtil;
 import com.bhavi.ecommerce.userservice.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,7 +32,6 @@ public class AuthController {
     private final UserRepository userRepository;
     private final UserService userService;
     private final JwtUtil jwtUtil;
-    private final AuthenticationManager authenticationManager; // Injected from SecurityConfig
 
     @PostMapping("/register")
     @PreAuthorize("hasRole('ADMIN')")
@@ -40,33 +41,19 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginRequest request) {
-        try {
-            // Authenticate user using Spring Security's AuthenticationManager
-            Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
-
-            // If authentication is successful, get UserDetails and generate JWT
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String token = jwtUtil.generateToken(userDetails);
-
-            // Find the actual User object to get userId and email for the response
-            User user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new RuntimeException("User not found after successful authentication."));
-
-
-            return ResponseEntity.ok(AuthResponse.builder()
-                    .token(token)
-                    .message("Login successful!")
-                    .userId(user.getId())
-                    .userEmail(user.getEmail())
-                    .build());
-
-        } catch (Exception e) {
-            // Handle authentication failure (e.g., bad credentials)
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(AuthResponse.builder().message("Invalid email or password.").build());
+        AuthResponse authResponse = userService.login(request);
+        if (authResponse.getMessage().contains("Invalid")) {
+            return new ResponseEntity<>(authResponse, HttpStatus.UNAUTHORIZED);
         }
+        return new ResponseEntity<>(authResponse, HttpStatus.OK);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        String frontendBaseUrl = "http://localhost:5173"; // <-- CHANGE THIS TO YOUR ACTUAL FRONTEND BASE URL
+
+        userService.requestPasswordReset(request.getEmail(), frontendBaseUrl);
+        return ResponseEntity.ok("Password reset link sent to your email if the account exists.");
     }
 
     // Example secured endpoint (requires authentication)

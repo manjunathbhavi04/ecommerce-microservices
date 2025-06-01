@@ -24,7 +24,7 @@ public class DataLoader implements CommandLineRunner {
         // We use it to ensure essential data (like an initial admin user) exists.
 
         // 1. Create an Admin User if they don't already exist
-        if (userRepository.findByEmail("admin@example.com").isEmpty()) {
+        if (userRepository.findByEmail("creedassassin781@gmail.com").isEmpty()) {
             Set<Role> adminRoles = new HashSet<>();
             adminRoles.add(Role.ROLE_ADMIN);
             adminRoles.add(Role.ROLE_CUSTOMER); // An admin user might also act as a customer
@@ -32,7 +32,7 @@ public class DataLoader implements CommandLineRunner {
             User adminUser = User.builder()
                     .firstName("Super")
                     .lastName("Admin")
-                    .email("admin@example.com")
+                    .email("creedassassin781@gmail.com")
                     .password(passwordEncoder.encode("adminpass")) // Encode the password! Choose a strong one.
                     .roles(adminRoles) // Assign the set of enum roles
                     .build();
@@ -41,14 +41,14 @@ public class DataLoader implements CommandLineRunner {
         }
 
         // 2. Create a default Customer User if they don't already exist
-        if (userRepository.findByEmail("customer@example.com").isEmpty()) {
+        if (userRepository.findByEmail("manjunathbhavi890@gmail.com").isEmpty()) {
             Set<Role> customerRoles = new HashSet<>();
             customerRoles.add(Role.ROLE_CUSTOMER);
 
             User customerUser = User.builder()
                     .firstName("Default")
                     .lastName("Customer")
-                    .email("customer@example.com")
+                    .email("manjunathbhavi890@gmail.com")
                     .password(passwordEncoder.encode("customerpass")) // Encode the password!
                     .roles(customerRoles)
                     .build();
@@ -57,7 +57,7 @@ public class DataLoader implements CommandLineRunner {
         }
 
         // 3. Create a default Seller User if they don't already exist
-        if (userRepository.findByEmail("seller@example.com").isEmpty()) {
+        if (userRepository.findByEmail("manjunathdon890@gmail.com").isEmpty()) {
             Set<Role> sellerRoles = new HashSet<>();
             sellerRoles.add(Role.ROLE_SELLER);
             sellerRoles.add(Role.ROLE_CUSTOMER); // A seller is also typically a customer
@@ -65,7 +65,7 @@ public class DataLoader implements CommandLineRunner {
             User sellerUser = User.builder()
                     .firstName("Default")
                     .lastName("Seller")
-                    .email("seller@example.com")
+                    .email("manjunathdon890@gmail.com")
                     .password(passwordEncoder.encode("sellerpass")) // Encode the password!
                     .roles(sellerRoles)
                     .build();
