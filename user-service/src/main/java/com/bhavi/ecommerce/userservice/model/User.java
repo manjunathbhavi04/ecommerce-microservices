@@ -35,6 +35,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String lastName;
 
+    @Column(nullable = false)
+    private boolean isVerified;
+
     @ElementCollection(targetClass = Role.class, fetch = FetchType.EAGER) // Specify the target class for the collection
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING) // Store enum values as Strings in the database
@@ -74,7 +77,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return this.isVerified;
     }
 
 

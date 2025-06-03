@@ -1,6 +1,7 @@
 package com.bhavi.ecommerce.userservice.controller;
 
 import com.bhavi.ecommerce.userservice.dto.request.ForgotPasswordRequest;
+import com.bhavi.ecommerce.userservice.dto.request.ResetPasswordRequest;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
 import com.bhavi.ecommerce.userservice.dto.request.LoginRequest;
 import com.bhavi.ecommerce.userservice.dto.request.RegisterRequest;
@@ -11,6 +12,7 @@ import com.bhavi.ecommerce.userservice.security.JwtUtil;
 import com.bhavi.ecommerce.userservice.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -32,11 +34,23 @@ public class AuthController {
     private final UserRepository userRepository;
     private final UserService userService;
     private final JwtUtil jwtUtil;
+    @Value("${app.frontend.base-url}")
+    private String frontendBaseUrl;
 
     @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
+//    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthResponse> registerUser(@RequestBody RegisterRequest request) {
-        return new ResponseEntity<>(userService.registerUser(request), HttpStatus.CREATED);
+
+
+        AuthResponse response = userService.registerUser(request, frontendBaseUrl); // Pass frontendBaseUrl
+
+        if (response.getToken() != null && !response.getToken().isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } else if (response.getMessage() != null && response.getMessage().contains("already has the specified role")) {
+            return ResponseEntity.status(HttpStatus.OK).body(response);
+        } else {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+        }
     }
 
     @PostMapping("/login")
@@ -50,10 +64,29 @@ public class AuthController {
 
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        String frontendBaseUrl = "http://localhost:5173"; // <-- CHANGE THIS TO YOUR ACTUAL FRONTEND BASE URL
-
         userService.requestPasswordReset(request.getEmail(), frontendBaseUrl);
         return ResponseEntity.ok("Password reset link sent to your email if the account exists.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request.getToken(), request.getNewPassword());
+        return ResponseEntity.ok("Password has been reset successfully!");
+    }
+
+    // --- NEW ENDPOINT FOR EMAIL VERIFICATION ---
+    @GetMapping("/verify-email") // Using GET as it's typically a direct link click
+    public ResponseEntity<String> verifyEmail(@RequestParam("token") String token) {
+        userService.verifyEmail(token);
+        // In a real application, you might redirect to a success page on the frontend
+        return ResponseEntity.ok("Email verified successfully! You can now log in.");
+    }
+
+    // You might also want an endpoint to resend the verification email
+    @PostMapping("/resend-verification")
+    public ResponseEntity<String> resendVerification(@RequestBody ForgotPasswordRequest request) { // Reusing DTO
+        userService.resendVerificationEmail(request.getEmail(), frontendBaseUrl);
+        return ResponseEntity.ok("Verification email resent if account exists and is not yet verified.");
     }
 
     // Example secured endpoint (requires authentication)

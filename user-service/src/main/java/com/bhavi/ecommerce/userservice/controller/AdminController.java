@@ -26,10 +26,14 @@ public class AdminController {
     @PostMapping("/users") // e.g., POST http://localhost:8081/api/admin/users
     @PreAuthorize("hasRole('ADMIN')") // ONLY users with 'ROLE_ADMIN' can access this endpoint
     public ResponseEntity<AuthResponse> createOrAddRoleToUser(@RequestBody RegisterRequest request) {
+
+        //frontend base url for email verification
+        String frontendBaseUrl = "http://localhost:5173";
+
         // The userService.registerUser method now handles:
         // 1. Creating a new user with the specified role if the email doesn't exist.
         // 2. Adding the specified role to an existing user if the email exists but role is new.
-        AuthResponse response = userService.registerUser(request);
+        AuthResponse response = userService.registerUser(request, frontendBaseUrl);
 
         // Check if the operation was successful (e.g., token generated)
         if (response.getToken() != null && !response.getToken().isEmpty()) {

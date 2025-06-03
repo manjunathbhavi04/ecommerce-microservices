@@ -8,11 +8,15 @@ import com.bhavi.ecommerce.userservice.exception.InvalidTokenException;
 import com.bhavi.ecommerce.userservice.exception.TokenExpiredException;
 import com.bhavi.ecommerce.userservice.exception.UserNotFoundException;
 import com.bhavi.ecommerce.userservice.model.User;
+import com.bhavi.ecommerce.userservice.model.token.EmailVerificationToken;
 import com.bhavi.ecommerce.userservice.model.token.PasswordResetToken;
 import com.bhavi.ecommerce.userservice.repository.UserRepository;
+import com.bhavi.ecommerce.userservice.repository.token.EmailVerificationTokenRepository;
 import com.bhavi.ecommerce.userservice.repository.token.PasswordResetTokenRepository;
 import com.bhavi.ecommerce.userservice.security.JwtUtil;
 import com.bhavi.ecommerce.userservice.service.email.EmailService;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -37,12 +41,13 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final EmailService emailService; // Inject EmailService
     private final PasswordResetTokenRepository passwordResetTokenRepository;// Injected from SecurityConfig
 
 
     @Transactional // Ensures atomicity for database operations
-    public AuthResponse registerUser(RegisterRequest request) {
+    public AuthResponse registerUser(RegisterRequest request, String frontendBaseUrl) {
         Optional<User> existingUserOptional = userRepository.findByEmail(request.getEmail());
 
         if (existingUserOptional.isPresent()) {
@@ -63,6 +68,7 @@ public class UserService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
+                .isVerified(false)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
 
@@ -73,6 +79,39 @@ public class UserService {
 
         // Save the new user to the database
         User savedUser = userRepository.save(newUser);
+
+        // delete any old verification token for this user
+        emailVerificationTokenRepository.deleteByUserId(savedUser.getId());
+
+        // generate a unique token for email verification
+        String verificationTokenString = UUID.randomUUID().toString();
+
+        //set expiry date and time for the token
+        LocalDateTime expiryDateTime = LocalDateTime.now().plusHours(24);
+
+        // save the token for the user which is generated and can be used for the next 24 hrs
+        EmailVerificationToken emailVerificationToken = EmailVerificationToken.builder()
+                .expiryDate(expiryDateTime)
+                .user(savedUser)
+                .token(verificationTokenString)
+                .build();
+        emailVerificationTokenRepository.save(emailVerificationToken);
+
+        // 5. Construct the verification link
+        // This link will point to your backend endpoint for verification
+        String verificationLink = frontendBaseUrl + "/verify-email?token=" + verificationTokenString;
+
+        // 6. Send the verification email
+        String subject = "Verify Your E-commerce Account Email";
+        String emailContent = "Hello " + savedUser.getFirstName() + ",\n\n"
+                + "Thank you for registering with our E-commerce platform! "
+                + "Please click the following link to verify your email address:\n\n"
+                + verificationLink + "\n\n"
+                + "This link will expire in 24 hours.\n"
+                + "If you did not register for an account, please ignore this email.\n\n"
+                + "Best regards,\nYour E-commerce Team";
+
+        emailService.sendEmail(savedUser.getEmail(), subject, emailContent);
 
         // Generate JWT for the newly registered user
         String token = jwtUtil.generateToken(savedUser); // UserDetails is based on savedUser roles
@@ -216,5 +255,76 @@ public class UserService {
         // Invalidate/Delete the token after successful password reset
         // This prevents the same token from being used multiple times
         passwordResetTokenRepository.delete(resetToken);
+    }
+
+
+    // email verification
+    @Transactional
+    public void verifyEmail(String token) {
+        // find the email verification token
+        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
+                .orElseThrow(() ->  new InvalidTokenException("Invalid or non-existent email verification token."));
+
+        //check if the token has expired
+        if (verificationToken.isExpired()) {
+            emailVerificationTokenRepository.delete(verificationToken);
+            throw new TokenExpiredException("Email verification token has expired");
+        }
+
+        // get the associated user
+        User user = verificationToken.getUser();
+        if(user == null) {
+            throw new InvalidTokenException("Email verification token is not associated with a user.");
+        }
+
+        //check if the user is already verified
+        if(user.isEnabled()) {
+            emailVerificationTokenRepository.delete(verificationToken);
+            throw new InvalidTokenException("Email is already verified for this account");
+        }
+
+        // verify the user's email
+        user.setVerified(true);
+        userRepository.save(user);
+
+        emailVerificationTokenRepository.delete(verificationToken);
+    }
+
+    public void resendVerificationEmail(@NotBlank(message = "Email cannot be empty") @Email(message = "Invalid email format") String email, String frontendBaseUrl) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Invalid email, No user exist with the email"+email));
+
+        if(user.isEnabled()) {
+            throw new InvalidTokenException("Email is already verified for this account");
+        }
+
+        //we have to generate a new token to resend verification mail
+        emailVerificationTokenRepository.deleteByUserId(user.getId());
+
+        // generate a unique token for email verification
+        String verificationTokenString = UUID.randomUUID().toString();
+
+        //set expiry date and time for the token
+        LocalDateTime expiryDateTime = LocalDateTime.now().plusHours(24);
+
+        // save the token for the user which is generated and can be used for the next 24 hrs
+        EmailVerificationToken emailVerificationToken = EmailVerificationToken.builder()
+                .expiryDate(expiryDateTime)
+                .user(user)
+                .token(verificationTokenString)
+                .build();
+        emailVerificationTokenRepository.save(emailVerificationToken);
+
+//        Send the email ---
+        String verificationLink = frontendBaseUrl + "/verify-email?token=" + verificationTokenString;
+        String subject = "Resend: Verify Your E-commerce Account Email";
+        String emailContent = "Hello " + user.getFirstName() + ",\n\n"
+                + "We received a request to resend your email verification. "
+                + "Please click the following link to verify your email address:\n\n"
+                + verificationLink + "\n\n"
+                + "This link will expire in 24 hours.\n"
+                + "If you did not request this, please ignore this email.\n\n"
+                + "Best regards,\nYour E-commerce Team";
+        emailService.sendEmail(user.getEmail(), subject, emailContent);
     }
 }
