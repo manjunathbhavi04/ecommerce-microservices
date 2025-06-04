@@ -10,9 +10,11 @@ import com.bhavi.ecommerce.userservice.exception.UserNotFoundException;
 import com.bhavi.ecommerce.userservice.model.User;
 import com.bhavi.ecommerce.userservice.model.token.EmailVerificationToken;
 import com.bhavi.ecommerce.userservice.model.token.PasswordResetToken;
+import com.bhavi.ecommerce.userservice.model.token.RefreshToken;
 import com.bhavi.ecommerce.userservice.repository.UserRepository;
 import com.bhavi.ecommerce.userservice.repository.token.EmailVerificationTokenRepository;
 import com.bhavi.ecommerce.userservice.repository.token.PasswordResetTokenRepository;
+import com.bhavi.ecommerce.userservice.repository.token.RefreshTokenRepository;
 import com.bhavi.ecommerce.userservice.security.JwtUtil;
 import com.bhavi.ecommerce.userservice.service.email.EmailService;
 import jakarta.validation.constraints.Email;
@@ -21,12 +23,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional; // Good practice for operations that modify data
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Optional;
@@ -44,6 +46,7 @@ public class UserService {
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final EmailService emailService; // Inject EmailService
     private final PasswordResetTokenRepository passwordResetTokenRepository;// Injected from SecurityConfig
+    private final RefreshTokenRepository refreshTokenRepository;
 
 
     @Transactional // Ensures atomicity for database operations
@@ -144,7 +147,7 @@ public class UserService {
         User updatedUser = userRepository.save(user);
 
         // Generate a NEW token for the updated user.
-        // This new token will now contain ALL of the user's roles (including the newly added one).
+        // This new token will now contain ALL the user's roles (including the newly added one).
         String newToken = jwtUtil.generateToken(updatedUser);
 
         return AuthResponse.builder()
@@ -165,15 +168,36 @@ public class UserService {
 
             // If authentication is successful, get UserDetails and generate JWT
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-            String token = jwtUtil.generateToken(userDetails);
 
             // Find the actual User object to get userId and email for the response
             User user = userRepository.findByEmail(request.getEmail())
                     .orElseThrow(() -> new RuntimeException("User not found after successful authentication."));
 
+            // Generate Access token (JWT)
+            String token = jwtUtil.generateToken(userDetails);
+
+            //Generate a Refresh Token and save it
+            // first revoke any existing active refresh tokens for this user
+            refreshTokenRepository.deleteByUserId(user.getId());
+
+            //Generate refresh token
+            String refreshTokenstring = UUID.randomUUID().toString();
+
+            // set refresh token expiry 7 days from now
+            Instant refreshTokenExpiryDate = Instant.now().plusSeconds(60 * 60 * 24 * 7);
+
+            RefreshToken refreshToken = RefreshToken.builder()
+                    .token(refreshTokenstring)
+                    .user(user)
+                    .issuedAt(Instant.now())
+                    .expiryDate(refreshTokenExpiryDate)
+                    .revoked(false) //Initially not revoked
+                    .build();
+            refreshTokenRepository.save(refreshToken);
 
             return (AuthResponse.builder()
                     .token(token)
+                    .refreshToken(refreshTokenstring)
                     .message("Login successful!")
                     .userId(user.getId())
                     .userEmail(user.getEmail())
@@ -183,6 +207,60 @@ public class UserService {
             // Handle authentication failure (e.g., bad credentials)
             return (AuthResponse.builder().message("Invalid email or password.").build());
         }
+    }
+
+
+    //To Refresh tokens
+    @Transactional
+    public AuthResponse refreshAccessToken(String refreshTokenString) {
+        // find the refresh token first
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(refreshTokenString)
+                .orElseThrow(() -> new InvalidTokenException("Invalid Refresh Token"));
+
+        // check if the token is expired or revoked
+        if(refreshToken.isRevoked()) {
+            throw new InvalidTokenException("Refresh Token is revoked");
+        }
+        if(refreshToken.isExpired()) {
+            refreshTokenRepository.delete(refreshToken);
+            throw new TokenExpiredException("Refresh token has expired, Please log in again.");
+        }
+
+        User user = refreshToken.getUser();
+        if(user == null) {
+            throw new InvalidTokenException("Refresh Token is not associated with any user");
+        }
+
+        //Invalidate the old refresh token (Token rotation strategy)
+        //this is the security best practice: once the refresh token is used, it should be replaced
+        // this makes leaked refresh token useless after one use
+        refreshToken.setRevoked(true);
+        // mark the current as revoked and save it in the database
+        refreshTokenRepository.save(refreshToken);
+
+        //Generate new Access token
+        String newAccessToken = jwtUtil.generateToken(user);
+
+        String newRefreshToken = UUID.randomUUID().toString();
+
+        Instant newRefreshTokenExpiryDate = Instant.now().plusSeconds(60 * 60 * 24 * 7);
+
+        RefreshToken newRefreshToken1 = RefreshToken.builder()
+                .token(newRefreshToken)
+                .issuedAt(Instant.now())
+                .expiryDate(newRefreshTokenExpiryDate)
+                .user(user)
+                .revoked(false)
+                .build();
+        refreshTokenRepository.save(newRefreshToken1);
+
+        return AuthResponse.builder()
+                .refreshToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .userId(user.getId())
+                .userEmail(user.getEmail())
+                .message("Tokens refreshed successfully")
+                .build();
     }
 
 
