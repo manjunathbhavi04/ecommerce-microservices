@@ -1,10 +1,7 @@
 package com.bhavi.ecommerce.userservice.controller;
 
-import com.bhavi.ecommerce.userservice.dto.request.ForgotPasswordRequest;
-import com.bhavi.ecommerce.userservice.dto.request.ResetPasswordRequest;
+import com.bhavi.ecommerce.userservice.dto.request.*;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
-import com.bhavi.ecommerce.userservice.dto.request.LoginRequest;
-import com.bhavi.ecommerce.userservice.dto.request.RegisterRequest;
 import com.bhavi.ecommerce.userservice.enums.Role;
 import com.bhavi.ecommerce.userservice.model.User;
 import com.bhavi.ecommerce.userservice.repository.UserRepository;
@@ -88,7 +85,12 @@ public class AuthController {
         return ResponseEntity.ok("Verification email resent if account exists and is not yet verified.");
     }
 
-
+    // refresh token
+    @PostMapping("/refresh-token")
+    public ResponseEntity<AuthResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
+        AuthResponse response = userService.refreshAccessToken(refreshTokenRequest.getRefreshToken());
+        return ResponseEntity.ok(response);
+    }
 
     // Example secured endpoint (requires authentication)
     @GetMapping("/test-secured")
