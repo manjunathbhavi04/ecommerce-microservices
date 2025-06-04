@@ -41,7 +41,6 @@ public class AuthController {
 //    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AuthResponse> registerUser(@RequestBody RegisterRequest request) {
 
-
         AuthResponse response = userService.registerUser(request, frontendBaseUrl); // Pass frontendBaseUrl
 
         if (response.getToken() != null && !response.getToken().isEmpty()) {
@@ -88,6 +87,8 @@ public class AuthController {
         userService.resendVerificationEmail(request.getEmail(), frontendBaseUrl);
         return ResponseEntity.ok("Verification email resent if account exists and is not yet verified.");
     }
+
+
 
     // Example secured endpoint (requires authentication)
     @GetMapping("/test-secured")
