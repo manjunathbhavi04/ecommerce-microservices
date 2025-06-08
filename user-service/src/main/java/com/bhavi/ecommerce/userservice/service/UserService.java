@@ -1,14 +1,13 @@
 package com.bhavi.ecommerce.userservice.service;
 
+import com.bhavi.ecommerce.userservice.dto.request.ChangePasswordRequest;
 import com.bhavi.ecommerce.userservice.dto.request.LoginRequest;
 import com.bhavi.ecommerce.userservice.dto.request.RegisterRequest;
 import com.bhavi.ecommerce.userservice.dto.request.UserProfileUpdateRequest;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
 import com.bhavi.ecommerce.userservice.dto.response.UserProfileResponse;
 import com.bhavi.ecommerce.userservice.enums.Role;
-import com.bhavi.ecommerce.userservice.exception.InvalidTokenException;
-import com.bhavi.ecommerce.userservice.exception.TokenExpiredException;
-import com.bhavi.ecommerce.userservice.exception.UserNotFoundException;
+import com.bhavi.ecommerce.userservice.exception.*;
 import com.bhavi.ecommerce.userservice.model.User;
 import com.bhavi.ecommerce.userservice.model.token.EmailVerificationToken;
 import com.bhavi.ecommerce.userservice.model.token.PasswordResetToken;
@@ -138,6 +137,7 @@ public class UserService {
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .email(request.getEmail())
+                .enabled(true)
                 .isVerified(false)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .build();
@@ -272,7 +272,8 @@ public class UserService {
 
         } catch (Exception e) {
             // Handle authentication failure (e.g., bad credentials)
-            return (AuthResponse.builder().message("Invalid email or password.").build());
+            throw new InvalidCredentialsException("Invalid email or password");
+//            return (AuthResponse.builder().message("Invalid email or password.").build());
         }
     }
 
@@ -497,5 +498,65 @@ public class UserService {
                 .roles(user.getRoles())
                 .message("User list retrieved successfully.") // Consistent message
                 .build());
+    }
+
+    @Transactional
+    public void changePassword(Long userId, @Valid ChangePasswordRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        // 1. Verify current password
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new InvalidCredentialsException("Incorrect Current Password");
+        }
+
+        // 2. Check if new password matches confirmation
+        if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
+            throw new PasswordMismatchException("New password and confirmation password do not match.");
+        }
+
+        // 3. Prevent changing to the same password (optional, but good UX/security)
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("New password cannot be the same as the current password.");
+        }
+
+        // 4. Encode and set new password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        // 5. Invalidate all existing refresh tokens for this user for security
+        // This forces all other sessions to re-authenticate with the new password.
+        //basically, every other logged in device is logged out
+        refreshTokenRepository.deleteByUserId(user.getId());
+    }
+
+    @Transactional
+    public void deactivateUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Invalid UserId: "+ id));
+
+        // check if the user is already deactivated
+        if(!user.isEnabled()) {
+            throw new UserAlreadyDeactivatedException("User with ID " + id + " is already deactivated.");
+        }
+
+        user.setEnabled(false);
+        userRepository.save(user);
+        refreshTokenRepository.deleteByUserId(user.getId());
+    }
+
+    @Transactional
+    public void activateUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Invalid UserId: "+ id));
+
+        //check if the user is already activated
+        if(user.isEnabled()) {
+            throw new UserAlreadyActivatedException("User with ID " + id + " is already activated.");
+        }
+
+        user.setEnabled(true);
+        userRepository.save(user);
+        refreshTokenRepository.deleteByUserId(user.getId());
     }
 }

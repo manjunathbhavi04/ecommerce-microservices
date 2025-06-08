@@ -36,6 +36,7 @@ public class DataLoader implements CommandLineRunner {
                     .password(passwordEncoder.encode("adminpass")) // Encode the password! Choose a strong one.
                     .roles(adminRoles) // Assign the set of enum roles
                     .isVerified(true)
+                    .enabled(true)
                     .build();
             userRepository.save(adminUser);
             System.out.println("Initial Admin user 'admin@example.com' created.");
@@ -53,6 +54,7 @@ public class DataLoader implements CommandLineRunner {
                     .password(passwordEncoder.encode("customerpass")) // Encode the password!
                     .roles(customerRoles)
                     .isVerified(false)
+                    .enabled(true)
                     .build();
             userRepository.save(customerUser);
             System.out.println("Default Customer user 'customer@example.com' created.");
@@ -71,6 +73,7 @@ public class DataLoader implements CommandLineRunner {
                     .password(passwordEncoder.encode("sellerpass")) // Encode the password!
                     .roles(sellerRoles)
                     .isVerified(false)
+                    .enabled(true)
                     .build();
             userRepository.save(sellerUser);
             System.out.println("Default Seller user 'seller@example.com' created.");

@@ -1,6 +1,8 @@
 package com.bhavi.ecommerce.userservice.controller;
 
+import com.bhavi.ecommerce.userservice.dto.request.ChangePasswordRequest;
 import com.bhavi.ecommerce.userservice.dto.request.UserProfileUpdateRequest;
+import com.bhavi.ecommerce.userservice.dto.response.ApiResponse;
 import com.bhavi.ecommerce.userservice.dto.response.UserProfileResponse;
 import com.bhavi.ecommerce.userservice.model.User;
 import com.bhavi.ecommerce.userservice.service.UserService;
@@ -36,6 +38,19 @@ public class UserController {
             return new ResponseEntity<>(response, HttpStatus.NOT_MODIFIED);
         }
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("/profile/change-password")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request,
+            Authentication authentication) {
+
+        Long userId = ((User) authentication.getPrincipal()).getId(); // Get user ID from authenticated principal
+        userService.changePassword(userId, request); // Call the service method
+
+        // Return a generic success response
+        return new ResponseEntity<>(new ApiResponse("Password changed successfully!"), HttpStatus.OK);
     }
 
     /**
@@ -85,5 +100,19 @@ public class UserController {
             @Valid @RequestBody UserProfileUpdateRequest request) {
         UserProfileResponse response = userService.updateUserProfile(id, request);
         return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("/admin/{id}/deactivate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> deactivateUser(@PathVariable("id") Long id) {
+        userService.deactivateUser(id);
+        return new ResponseEntity<>(new ApiResponse("User account deactivated successfully."), HttpStatus.OK);
+    }
+
+    @PutMapping("/admin/{id}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse> activateUser(@PathVariable("id") Long id) {
+        userService.activateUser(id);
+        return new ResponseEntity<>(new ApiResponse("User account activated successfully."), HttpStatus.OK);
     }
 }

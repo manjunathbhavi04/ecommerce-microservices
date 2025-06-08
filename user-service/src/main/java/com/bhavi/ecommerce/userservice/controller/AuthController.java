@@ -2,8 +2,6 @@ package com.bhavi.ecommerce.userservice.controller;
 
 import com.bhavi.ecommerce.userservice.dto.request.*;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
-import com.bhavi.ecommerce.userservice.enums.Role;
-import com.bhavi.ecommerce.userservice.model.User;
 import com.bhavi.ecommerce.userservice.repository.UserRepository;
 import com.bhavi.ecommerce.userservice.security.JwtUtil;
 import com.bhavi.ecommerce.userservice.service.UserService;
@@ -13,15 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Collections;
-import java.util.Optional;
 
 @RestController // Marks this as a REST controller
 @RequestMapping("/api/auth") // Base URL for all endpoints in this controller

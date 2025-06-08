@@ -38,6 +38,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private boolean isVerified;
 
+    @Column(nullable = false)
+    private boolean enabled;
+
     @ElementCollection(targetClass = Role.class, fetch = FetchType.EAGER) // Specify the target class for the collection
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING) // Store enum values as Strings in the database
@@ -50,10 +53,10 @@ public class User implements UserDetails {
         return new ArrayList<>(roles); // No need for SimpleGrantedAuthority anymore
     }
 
-//    @Override
-//    public String getPassword() {
-//        return "";
-//    }
+    @Override
+    public String getPassword() {
+        return this.password;
+    }
 
     @Override
     public String getUsername() {
@@ -77,7 +80,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return this.isVerified;
+        return this.enabled;
     }
 
 
