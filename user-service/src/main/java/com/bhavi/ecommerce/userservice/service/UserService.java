@@ -2,7 +2,9 @@ package com.bhavi.ecommerce.userservice.service;
 
 import com.bhavi.ecommerce.userservice.dto.request.LoginRequest;
 import com.bhavi.ecommerce.userservice.dto.request.RegisterRequest;
+import com.bhavi.ecommerce.userservice.dto.request.UserProfileUpdateRequest;
 import com.bhavi.ecommerce.userservice.dto.response.AuthResponse;
+import com.bhavi.ecommerce.userservice.dto.response.UserProfileResponse;
 import com.bhavi.ecommerce.userservice.enums.Role;
 import com.bhavi.ecommerce.userservice.exception.InvalidTokenException;
 import com.bhavi.ecommerce.userservice.exception.TokenExpiredException;
@@ -17,9 +19,13 @@ import com.bhavi.ecommerce.userservice.repository.token.PasswordResetTokenReposi
 import com.bhavi.ecommerce.userservice.repository.token.RefreshTokenRepository;
 import com.bhavi.ecommerce.userservice.security.JwtUtil;
 import com.bhavi.ecommerce.userservice.service.email.EmailService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -48,6 +54,67 @@ public class UserService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;// Injected from SecurityConfig
     private final RefreshTokenRepository refreshTokenRepository;
 
+
+    //Get Users Profile
+    public UserProfileResponse getUserProfile(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("Invalid User id"));
+
+        return UserProfileResponse.builder()
+                .id(id)
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .message("Successfully retrieved")
+                .roles(user.getRoles())
+                .lastName(user.getLastName())
+                .isVerified(user.isVerified())
+                .build();
+    }
+
+    // Update Users Profile
+    @Transactional
+    public UserProfileResponse updateUserProfile(Long userId, UserProfileUpdateRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        boolean changed = false;
+
+        // Only update if the new value is provided and different from the current one
+        if (request.getFirstName() != null && !request.getFirstName().trim().isEmpty()) {
+            String trimmedFirstName = request.getFirstName().trim();
+            if (!trimmedFirstName.equals(user.getFirstName())) {
+                user.setFirstName(trimmedFirstName);
+                changed = true;
+            }
+        }
+        if (request.getLastName() != null && !request.getLastName().trim().isEmpty()) {
+            String trimmedLastName = request.getLastName().trim();
+            if (!trimmedLastName.equals(user.getLastName())) {
+                user.setLastName(trimmedLastName);
+                changed = true;
+            }
+        }
+
+        User updatedUser = user; // Start with potentially unchanged user
+        String responseMessage;
+
+        if (changed) {
+            updatedUser = userRepository.save(user); // Save only if actual changes occurred
+            responseMessage = "User profile updated successfully!";
+        } else {
+            responseMessage = "No changes detected for user profile. Profile remains unchanged.";
+        }
+
+        return UserProfileResponse.builder()
+                .id(updatedUser.getId())
+                .email(updatedUser.getEmail())
+                .firstName(updatedUser.getFirstName())
+                .lastName(updatedUser.getLastName())
+                .isVerified(updatedUser.isVerified())
+                .roles(updatedUser.getRoles())
+                .message(responseMessage) // Set the appropriate message
+                .build();
+    }
 
     @Transactional // Ensures atomicity for database operations
     public AuthResponse registerUser(RegisterRequest request, String frontendBaseUrl) {
@@ -404,5 +471,31 @@ public class UserService {
                 + "If you did not request this, please ignore this email.\n\n"
                 + "Best regards,\nYour E-commerce Team";
         emailService.sendEmail(user.getEmail(), subject, emailContent);
+    }
+
+    // ------------------------------------ Admin User Management ------------------------------------
+
+    public Page<UserProfileResponse> getAllUsers(int page, int size, String sortBy, String sortOrder, String searchKeyword) {
+        Sort sort = Sort.by(Sort.Direction.fromString(sortOrder), sortBy);
+        PageRequest pageable = PageRequest.of(page, size, sort);
+
+        Page<User> userPage;
+        if (searchKeyword != null && !searchKeyword.trim().isEmpty()) {
+            String keyword = searchKeyword.toLowerCase().trim();
+            userPage = userRepository.findByEmailContainingIgnoreCaseOrFirstNameContainingIgnoreCaseOrLastNameContainingIgnoreCase(
+                    keyword, keyword, keyword, pageable);
+        } else {
+            userPage = userRepository.findAll(pageable);
+        }
+
+        return userPage.map(user -> UserProfileResponse.builder()
+                .id(user.getId())
+                .email(user.getEmail())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .isVerified(user.isVerified())
+                .roles(user.getRoles())
+                .message("User list retrieved successfully.") // Consistent message
+                .build());
     }
 }
