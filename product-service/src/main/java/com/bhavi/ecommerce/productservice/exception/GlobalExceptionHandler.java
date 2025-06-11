@@ -12,13 +12,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ProductNotFoundException.class)
     public ResponseEntity<ApiResponse> handleProductNotFoundException(ProductNotFoundException ex) {
-        ApiResponse response = new ApiResponse(ex.getMessage());
+        ApiResponse response = new ApiResponse(ex.getMessage(), false);
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(ProductAlreadyExistsException.class)
     public ResponseEntity<ApiResponse> handleProductAlreadyExistsException(ProductAlreadyExistsException ex) {
-        ApiResponse response = new ApiResponse(ex.getMessage());
+        ApiResponse response = new ApiResponse(ex.getMessage(), false);
         return new ResponseEntity<>(response, HttpStatus.CONFLICT);
     }
 }
