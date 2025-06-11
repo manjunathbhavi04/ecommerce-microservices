@@ -19,7 +19,9 @@
     </properties>
 
     <modules>
-        <module>user-service</module> </modules>
+        <module>user-service</module>
+        <module>product-service</module>
+    </modules>
 
     <dependencyManagement>
         <dependencies>
