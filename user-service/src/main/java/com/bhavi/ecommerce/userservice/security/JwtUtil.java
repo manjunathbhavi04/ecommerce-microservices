@@ -6,6 +6,7 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -19,12 +20,13 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component // Marks this as a Spring component for dependency injection
+@Slf4j
 public class JwtUtil {
 
     @Value("${jwt.secret}") // Inject the secret key from application.properties
     private String SECRET_KEY;
 
-    @Value("${jwt.expiration}") // Inject the expiration time
+    @Value("${jwt.expiration.ms}") // Inject the expiration time
     private long JWT_EXPIRATION;
 
     // Method to extract the username from the token
@@ -89,6 +91,8 @@ public class JwtUtil {
 
     // Decode the secret key to a Java Security Key
     private Key getSignKey() {
+        log.info("Attempting to decode JWT Secret: '{}'", SECRET_KEY);
+
         byte[] keyBytes = Decoders.BASE64.decode(SECRET_KEY);
         return Keys.hmacShaKeyFor(keyBytes);
     }

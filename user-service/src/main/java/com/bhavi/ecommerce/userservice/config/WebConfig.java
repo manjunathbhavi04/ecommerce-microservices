@@ -13,6 +13,14 @@ public class WebConfig implements WebMvcConfigurer { // Implements WebMvcConfigu
     @Bean
     public CorsFilter corsFilter() { // This bean will be auto-detected by Spring Security
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = getCorsConfiguration();
+        config.setAllowCredentials(true); // Allows credentials (like cookies or Authorization headers) to be sent
+
+        source.registerCorsConfiguration("/**", config); // Apply this CORS configuration to all paths
+        return new CorsFilter(source);
+    }
+
+    private static CorsConfiguration getCorsConfiguration() {
         CorsConfiguration config = new CorsConfiguration();
 
         // --- IMPORTANT: Configure your allowed origins ---
@@ -23,10 +31,7 @@ public class WebConfig implements WebMvcConfigurer { // Implements WebMvcConfigu
 
         config.addAllowedHeader("*"); // Allows all headers
         config.addAllowedMethod("*"); // Allows all HTTP methods (GET, POST, PUT, DELETE, OPTIONS etc.)
-        config.setAllowCredentials(true); // Allows credentials (like cookies or Authorization headers) to be sent
-
-        source.registerCorsConfiguration("/**", config); // Apply this CORS configuration to all paths
-        return new CorsFilter(source);
+        return config;
     }
 
     // You can add other web configurations here if needed, e.g.:

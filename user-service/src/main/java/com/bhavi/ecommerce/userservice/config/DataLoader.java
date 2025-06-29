@@ -53,7 +53,7 @@ public class DataLoader implements CommandLineRunner {
                     .email("manjunathbhavi890@gmail.com")
                     .password(passwordEncoder.encode("customerpass")) // Encode the password!
                     .roles(customerRoles)
-                    .isVerified(false)
+                    .isVerified(true)
                     .enabled(true)
                     .build();
             userRepository.save(customerUser);
@@ -72,7 +72,7 @@ public class DataLoader implements CommandLineRunner {
                     .email("manjunathdon890@gmail.com")
                     .password(passwordEncoder.encode("sellerpass")) // Encode the password!
                     .roles(sellerRoles)
-                    .isVerified(false)
+                    .isVerified(true)
                     .enabled(true)
                     .build();
             userRepository.save(sellerUser);

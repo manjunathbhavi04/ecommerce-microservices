@@ -30,7 +30,7 @@ public class ProductController {
 
     // Get Page by its ID
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getProductById(@PathVariable Long id) {
+    public ResponseEntity<ProductResponse> getProductById(@PathVariable("id") Long id) {
         log.info("Received request to get product by ID: {}", id);
         ProductResponse product = productService.getProductById(id);
         return new ResponseEntity<>(product, HttpStatus.OK);
@@ -51,7 +51,7 @@ public class ProductController {
 
     // Update Product
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable("id") Long id, @Valid @RequestBody ProductRequest request) {
         log.info("Received request to update product ID: {}", id);
         ProductResponse updatedProduct = productService.updateProduct(id, request);
         return new ResponseEntity<>(updatedProduct, HttpStatus.OK);
@@ -59,7 +59,7 @@ public class ProductController {
 
     // Delete a Product with its ID
     @DeleteMapping("/{id}")
-    public ResponseEntity<ApiResponse> deleteProduct(@PathVariable Long id) {
+    public ResponseEntity<ApiResponse> deleteProduct(@PathVariable("id") Long id) {
         log.info("Received request to delete product ID: {}", id);
         productService.deleteProduct(id);
         ApiResponse response = new ApiResponse("Product with ID: " + id + " deleted successfully.", true);

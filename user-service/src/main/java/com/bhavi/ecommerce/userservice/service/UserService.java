@@ -251,7 +251,7 @@ public class UserService {
             String refreshTokenstring = UUID.randomUUID().toString();
 
             // set refresh token expiry 7 days from now
-            Instant refreshTokenExpiryDate = Instant.now().plusSeconds(60 * 60 * 24 * 7);
+            Instant refreshTokenExpiryDate = Instant.now().plusSeconds(60 * 60 * 24 * 7); // after seven days token is expired
 
             RefreshToken refreshToken = RefreshToken.builder()
                     .token(refreshTokenstring)

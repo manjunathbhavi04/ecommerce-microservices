@@ -42,9 +42,9 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> loginUser(@RequestBody LoginRequest request) {
         AuthResponse authResponse = userService.login(request);
-        if (authResponse.getMessage().contains("Invalid")) {
-            return new ResponseEntity<>(authResponse, HttpStatus.UNAUTHORIZED);
-        }
+//        if (authResponse.getMessage().contains("Invalid")) {
+//            return new ResponseEntity<>(authResponse, HttpStatus.UNAUTHORIZED);
+//        }
         return new ResponseEntity<>(authResponse, HttpStatus.OK);
     }
 
