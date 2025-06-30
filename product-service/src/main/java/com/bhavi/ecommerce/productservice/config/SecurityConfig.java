@@ -1,5 +1,6 @@
 package com.bhavi.ecommerce.productservice.config;
 
+import com.bhavi.ecommerce.productservice.security.jwt.CustomAuthenticationEntryPoint; // Import this
 import com.bhavi.ecommerce.productservice.security.jwt.JwtAuthenticationFilter;
 import com.bhavi.ecommerce.productservice.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -13,27 +14,30 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-@Configuration // Marks this class as a Spring configuration class
-@EnableWebSecurity // Enables Spring Security's web security features
-@RequiredArgsConstructor // For injecting JwtUtil
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor // For injecting JwtUtil and CustomAuthenticationEntryPoint
 public class SecurityConfig {
 
-    private final JwtUtil jwtUtil; // Used to create JwtAuthenticationFilter
+    private final JwtUtil jwtUtil;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint; // Inject CustomAuthenticationEntryPoint
 
-    // Define the custom JWT filter as a Bean
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtUtil);
     }
 
-    // Configure the security filter chain
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable) // Disable CSRF for stateless REST APIs
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Use stateless sessions (no HttpSession)
+
+                .httpBasic(AbstractHttpConfigurer::disable)
+                .formLogin(AbstractHttpConfigurer::disable)
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(customAuthenticationEntryPoint)) // Set custom entry point for auth errors
+
                 .authorizeHttpRequests(authorize -> authorize
-                        // Publicly accessible endpoints (no authentication/authorization needed)
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll() // Anyone can view products
 
                         // Endpoints requiring ADMIN role
@@ -41,7 +45,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
 
-                        // All other requests must be authenticated
                         .anyRequest().authenticated()
                 );
 
@@ -50,4 +53,10 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+    // define your CustomAuthenticationEntryPoint as a @Bean here if it's not @Component
+    // @Bean
+    // public CustomAuthenticationEntryPoint customAuthenticationEntryPoint() {
+    //     return new CustomAuthenticationEntryPoint();
+    // }
 }

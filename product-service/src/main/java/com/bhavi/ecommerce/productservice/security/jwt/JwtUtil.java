@@ -55,7 +55,7 @@ public class JwtUtil {
     }
 
     private Key getSignedKey() {
-        log.info("Attempting to decode JWT Secret: '{}'", SECRET);
+        log.debug("Attempting to decode JWT .");
         byte[] keyBytes = Decoders.BASE64.decode(SECRET);
         return Keys.hmacShaKeyFor(keyBytes);
     }
