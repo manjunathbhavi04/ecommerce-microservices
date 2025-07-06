@@ -43,25 +43,25 @@ public class Order {
     private BigDecimal totalPrice;
 
     @Column(nullable = false)
-    private Integer quantity;
+    private Integer totalQuantity;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> orderItem;
+    private List<OrderItem> orderItems;
 
     // Helper to add order item to the order item list
     public void addItem(OrderItem item) {
 
-        if(orderItem == null) {
-            orderItem = new ArrayList<>();
+        if(orderItems == null) {
+            orderItems = new ArrayList<>();
         }
 
-        orderItem.add(item);
+        orderItems.add(item);
         item.setOrder(this);
     }
 
     // Helper to remove item from the order list
     public void removeOrderItem(OrderItem item) {
-        orderItem.remove(item);
+        orderItems.remove(item);
         item.setOrder(null);
     }
 
