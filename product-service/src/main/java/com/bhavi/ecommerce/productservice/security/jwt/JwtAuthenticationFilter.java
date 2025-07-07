@@ -26,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
 
     @Override
+    // abstract method in the OncePerRequestFilter abstract class
     protected void doFilterInternal(
             HttpServletRequest request,
             HttpServletResponse response,
