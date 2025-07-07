@@ -1,11 +1,14 @@
 package com.bhavi.ecommerce.orderservice.service;
 
+import com.bhavi.ecommerce.orderservice.dto.request.OrderRequest;
+import com.bhavi.ecommerce.orderservice.dto.response.OrderResponse;
 import com.bhavi.ecommerce.orderservice.enums.Status;
 import com.bhavi.ecommerce.orderservice.exception.OrderNotFoundException;
 import com.bhavi.ecommerce.orderservice.model.Order;
 import com.bhavi.ecommerce.orderservice.model.OrderItem;
 import com.bhavi.ecommerce.orderservice.repository.OrderItemRepository;
 import com.bhavi.ecommerce.orderservice.repository.OrderRepository;
+import com.bhavi.ecommerce.orderservice.transformer.OrderTransformer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +24,9 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
 
     @Transactional
-    public Order placeOrder(Order order) {
+    public OrderResponse placeOrder(OrderRequest ord) {
+
+        Order order = OrderTransformer.orderRequestToOrder(ord);
 
         // Generating unique tracking order number
         order.setOrderTrackingNumber(generateNumber());
@@ -48,12 +53,18 @@ public class OrderService {
         order.setTotalQuantity(totalOrderQuantity);
         order.setTotalPrice(totalOrderPrice);
 
-        return orderRepository.save(order);
+        Order savedOrder =  orderRepository.save(order);
+
+        return OrderTransformer.orderToOrderResponse(savedOrder);
     }
 
     @Transactional(readOnly = true)
-    public Order getOrderByOrderId(Long orderId) {
-        return orderRepository.findById(orderId).orElseThrow(() -> new OrderNotFoundException("Invalid Order Id: "+ orderId));
+    public OrderResponse getOrderByOrderId(Long orderId) {
+        return OrderTransformer.orderToOrderResponse(
+                orderRepository.findById(orderId).orElseThrow(
+                        () -> new OrderNotFoundException("Invalid Order Id: "+ orderId)
+                )
+        );
     }
 
     private String generateNumber() {

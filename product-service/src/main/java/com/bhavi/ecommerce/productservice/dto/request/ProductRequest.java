@@ -13,7 +13,8 @@ import java.math.BigDecimal;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ProductRequest {
+public class
+ProductRequest {
 
     @NotBlank(message = "Product name cannot be empty")
     @Size(max = 100, message = "Product name cannot exceed 100 characters")

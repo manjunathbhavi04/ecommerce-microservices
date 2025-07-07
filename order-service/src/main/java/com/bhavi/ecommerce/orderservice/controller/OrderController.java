@@ -1,5 +1,7 @@
 package com.bhavi.ecommerce.orderservice.controller;
 
+import com.bhavi.ecommerce.orderservice.dto.request.OrderRequest;
+import com.bhavi.ecommerce.orderservice.dto.response.OrderResponse;
 import com.bhavi.ecommerce.orderservice.model.Order;
 import com.bhavi.ecommerce.orderservice.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -15,12 +17,12 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping("/create")
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
+    public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest order) {
         return new ResponseEntity<>(orderService.placeOrder(order), HttpStatus.CREATED);
     }
 
     @GetMapping("/{orderId}")
-    public ResponseEntity<Order> getOrderById(@PathVariable("orderId") Long id) {
+    public ResponseEntity<OrderResponse> getOrderById(@PathVariable("orderId") Long id) {
         return new ResponseEntity<>(orderService.getOrderByOrderId(id), HttpStatus.OK);
     }
 }
