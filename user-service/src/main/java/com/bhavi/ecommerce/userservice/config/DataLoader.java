@@ -23,6 +23,25 @@ public class DataLoader implements CommandLineRunner {
         // This method runs automatically after the Spring Boot application starts.
         // We use it to ensure essential data (like an initial admin user) exists.
 
+        if (userRepository.findByEmail("orderservice@example.com").isEmpty()) { // Use a distinct email
+            Set<Role> serviceRoles = new HashSet<>();
+            serviceRoles.add(Role.ROLE_ADMIN); // For simplicity, give it ADMIN role for now to allow stock decrease
+            // OR create a custom ROLE_SERVICE if you have fine-grained permissions for decrease-stock
+            // serviceRoles.add(Role.ROLE_SERVICE);
+
+            User serviceUser = User.builder()
+                    .firstName("Order")
+                    .lastName("Service")
+                    .email("orderservice@example.com") // Use this email in orderservice.client.username
+                    .password(passwordEncoder.encode("orderservicepass")) // Use this password in orderservice.client.password
+                    .roles(serviceRoles)
+                    .isVerified(true)
+                    .enabled(true)
+                    .build();
+            userRepository.save(serviceUser);
+            System.out.println("Service user 'orderservice@example.com' created for inter-service calls.");
+        }
+
         // 1. Create an Admin User if they don't already exist
         if (userRepository.findByEmail("creedassassin781@gmail.com").isEmpty()) {
             Set<Role> adminRoles = new HashSet<>();

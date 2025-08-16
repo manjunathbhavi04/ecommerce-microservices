@@ -3,7 +3,9 @@ package com.bhavi.ecommerce.orderservice.config;
 import com.bhavi.ecommerce.orderservice.security.jwt.CustomAuthenticationEntryPoint;
 import com.bhavi.ecommerce.orderservice.security.jwt.JwtAuthenticationFilter;
 import com.bhavi.ecommerce.orderservice.security.jwt.JwtUtil;
+import com.bhavi.ecommerce.orderservice.service.client.ProductServiceClient;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -17,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.reactive.function.client.WebClient;
 
 @Configuration
 @EnableWebSecurity
@@ -25,6 +28,13 @@ public class SecurityConfig {
 
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
     private final JwtUtil jwtUtil;
+
+    // Define ProductServiceClient as a Bean here
+//    @Bean
+//    public ProductServiceClient productServiceClient(WebClient.Builder webClientBuilder,
+//                                                     @Value("${product.service.url}") String productServiceBaseUrl) {
+//        return new ProductServiceClient(webClientBuilder, productServiceBaseUrl);
+//    }
 
     @Bean
     // This method is invoked when ever there a request from the order api

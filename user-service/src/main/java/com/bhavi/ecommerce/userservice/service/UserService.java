@@ -22,6 +22,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -42,6 +43,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserService {
 
     private final UserRepository userRepository;
@@ -261,7 +263,7 @@ public class UserService {
                     .revoked(false) //Initially not revoked
                     .build();
             refreshTokenRepository.save(refreshToken);
-
+            log.info("Login token generated is {}",token);
             return (AuthResponse.builder()
                     .token(token)
                     .refreshToken(refreshTokenstring)

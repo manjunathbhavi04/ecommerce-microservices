@@ -42,6 +42,7 @@ public class SecurityConfig {
 
                         // Endpoints requiring ADMIN role
                         .requestMatchers(HttpMethod.POST, "/api/products/create").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("CUSTOMER")
                         .requestMatchers(HttpMethod.PUT, "/api/products/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
 

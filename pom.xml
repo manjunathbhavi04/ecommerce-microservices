@@ -17,7 +17,6 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- Define JJWT version here for consistency across modules -->
         <jjwt.version>0.11.2</jjwt.version>
         <jakarta-xml-bind.version>4.0.0</jakarta-xml-bind.version>
     </properties>
@@ -40,11 +39,9 @@
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
-                <version>1.18.30</version>
-                <scope>provided</scope>
+                <version>1.18.30</version> <scope>provided</scope>
             </dependency>
 
-            <!-- START: CENTRALIZED JWT DEPENDENCIES -->
             <dependency>
                 <groupId>io.jsonwebtoken</groupId>
                 <artifactId>jjwt-api</artifactId>
@@ -67,8 +64,6 @@
                 <artifactId>jakarta.xml.bind-api</artifactId>
                 <version>${jakarta-xml-bind.version}</version>
             </dependency>
-            <!-- END: CENTRALIZED JWT DEPENDENCIES -->
-
         </dependencies>
     </dependencyManagement>
 
@@ -80,23 +75,18 @@
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>${spring-boot.version}</version>
                 </plugin>
-                <!-- START: CENTRALIZED MAVEN COMPILER PLUGIN CONFIGURATION -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.11.0</version> <!-- Specify a version here -->
-                    <configuration>
-                        <parameters>true</parameters> <!-- Ensure parameter names are available via reflection -->
-                        <annotationProcessorPaths>
-                            <path>
-                                <groupId>org.projectlombok</groupId>
-                                <artifactId>lombok</artifactId>
-                                <version>1.18.30</version> <!-- Use the same Lombok version -->
-                            </path>
-                        </annotationProcessorPaths>
-                    </configuration>
+                    <version>3.11.0</version> <configuration>
+                    <parameters>true</parameters> <annotationProcessorPaths>
+                    <path>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok</artifactId>
+                        <version>1.18.30</version> </path>
+                </annotationProcessorPaths>
+                </configuration>
                 </plugin>
-                <!-- END: CENTRALIZED MAVEN COMPILER PLUGIN CONFIGURATION -->
             </plugins>
         </pluginManagement>
     </build>
@@ -106,9 +96,6 @@
             <id>mavenCentral</id>
             <url>https://repo.maven.apache.org/maven2</url>
         </repository>
-        <!-- The commented out repositories are usually only needed for pre-release versions (Milestone/Snapshot)
-             If 3.5.3 is GA and in Maven Central, these are not required.
-        -->
     </repositories>
     <pluginRepositories>
         <pluginRepository>

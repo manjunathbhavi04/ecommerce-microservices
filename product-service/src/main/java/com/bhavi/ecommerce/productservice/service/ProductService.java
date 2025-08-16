@@ -106,4 +106,11 @@ public class ProductService {
         log.info("Product with ID: {} deleted successfully.", id);
     }
 
+    public void decreaseStocks(Long id, Integer quantity) {
+        Product product = productRepository.findById(id).orElseThrow(
+                () -> new ProductNotFoundException("Invalid Product Id: "+id)
+        );
+        product.setStockQuantity(product.getStockQuantity() - quantity);
+        productRepository.save(product);
+    }
 }

@@ -4,6 +4,7 @@ import com.bhavi.ecommerce.orderservice.dto.request.OrderItemRequest;
 import com.bhavi.ecommerce.orderservice.dto.request.OrderRequest;
 import com.bhavi.ecommerce.orderservice.dto.response.OrderItemResponse;
 import com.bhavi.ecommerce.orderservice.dto.response.OrderResponse;
+import com.bhavi.ecommerce.orderservice.dto.response.ProductResponseDto;
 import com.bhavi.ecommerce.orderservice.model.Order;
 import com.bhavi.ecommerce.orderservice.model.OrderItem;
 
@@ -12,14 +13,9 @@ import java.util.List;
 
 public class OrderTransformer {
     public static Order orderRequestToOrder(OrderRequest order) {
-        List<OrderItem> items = new ArrayList<>();
 
-        for(OrderItemRequest item: order.getOrderItems()) {
-            items.add(OrderItemTransformer.orderItemRequestToOrderItem(item));
-        }
         return Order.builder()
                 .customerEmail(order.getCustomerEmail())
-                .orderItems(items)
                 .build();
     }
 
